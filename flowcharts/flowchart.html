@@ -3,1880 +3,819 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Intelligent Predictive Maintenance - AI Power Panel</title>
+    <title>Intelligent Predictive Maintenance | 3-Phase Power Panel</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         :root {
-            --bg-dark: #0a0e1a;
-            --bg-panel: #111827;
-            --bg-card: #1f2937;
-            --border-color: #374151;
-            --primary: #3b82f6;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --text-primary: #f9fafb;
-            --text-secondary: #9ca3af;
-            --accent-cyan: #06b6d4;
+            --bg-base: #0f111a;
+            --bg-surface: #1a1d2d;
+            --bg-panel: #222639;
+            --border: #31364f;
+            --text-main: #e2e8f0;
+            --text-muted: #8b949e;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --accent-yellow: #f59e0b;
             --accent-purple: #8b5cf6;
         }
 
-        body {
-            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* Scanline effect */
-        body::before {
-            content: "";
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(
-                rgba(18, 16, 16, 0) 50%,
-                rgba(0, 0, 0, 0.25) 50%
-            );
-            background-size: 100% 4px;
-            pointer-events: none;
-            z-index: 1000;
-            opacity: 0.3;
-        }
-
-        .header {
-            background: linear-gradient(135deg, var(--bg-panel) 0%, #1a1f2e 100%);
-            border-bottom: 2px solid var(--primary);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-
-        .header h1 {
-            font-size: 1.5rem;
-            background: linear-gradient(90deg, var(--primary), var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-
-        .status-bar {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--success);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
-        }
-
-        .master-trip {
-            background: var(--danger);
-            color: white;
-            padding: 0.5rem 1.5rem;
-            border-radius: 6px;
-            font-weight: bold;
-            display: none;
-            animation: blink 1s infinite;
-            border: 2px solid #fff;
-        }
-
-        .master-trip.active {
-            display: block;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        .container {
-            padding: 1.5rem;
-            max-width: 1920px;
-            margin: 0 auto;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: auto auto auto;
-            gap: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .panel {
-            background: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.25rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .panel::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--accent-cyan));
-            opacity: 0.7;
-        }
-
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .panel-title {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .panel-icon {
-            width: 20px;
-            height: 20px;
-            opacity: 0.8;
-        }
-
-        /* Session 1: Electrical Readings */
-        .electrical-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
-        .phase-group {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 1rem;
-            border-left: 4px solid var(--primary);
-        }
-
-        .phase-group.branch {
-            border-left-color: var(--accent-purple);
-        }
-
-        .phase-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        .gauge-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .gauge {
-            flex: 1;
-            text-align: center;
-        }
-
-        .gauge-value {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            font-family: 'Courier New', monospace;
-        }
-
-        .gauge-label {
-            font-size: 0.65rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
-
-        .gauge-unit {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-        }
-
-        /* Session 2: Load Type Selector */
-        .loadtype-selector {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
-        }
-
-        .loadtype-btn {
-            background: var(--bg-card);
-            border: 2px solid var(--border-color);
-            border-radius: 10px;
-            padding: 1rem;
-            cursor: pointer;
-            transition: all 0.3s;
-            color: var(--text-primary);
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .loadtype-btn:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
-        }
-
-        .loadtype-btn.active {
-            border-color: var(--success);
-            background: rgba(16, 185, 129, 0.1);
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
-        }
-
-        .loadtype-btn.active::before {
-            content: '✓';
-            position: absolute;
-            top: 6px;
-            right: 8px;
-            width: 18px;
-            height: 18px;
-            background: var(--success);
-            border-radius: 50%;
-            font-size: 0.65rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-
-        .loadtype-icon {
-            margin-bottom: 0.5rem;
-            color: var(--text-secondary);
-        }
-
-        .loadtype-btn.active .loadtype-icon {
-            color: var(--success);
-        }
-
-        .loadtype-name {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .loadtype-desc {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-        }
-
-        .ai-detection-box {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 0.875rem;
-            border: 1px solid var(--border-color);
-        }
-
-        .ai-detection-header {
-            font-size: 0.75rem;
-            color: var(--accent-cyan);
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
-        }
-
-        .ai-detection-result {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .detection-indicator {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg-dark);
-            flex-shrink: 0;
-        }
-
-        .detection-pulse {
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            animation: detectPulse 2s infinite;
-        }
-
-        .detection-pulse.single-phase {
-            background: var(--warning);
-            box-shadow: 0 0 10px var(--warning);
-        }
-
-        .detection-pulse.three-phase {
-            background: var(--success);
-            box-shadow: 0 0 10px var(--success);
-        }
-
-        @keyframes detectPulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.3); }
-        }
-
-        .detection-value {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .detection-confidence {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-top: 0.15rem;
-        }
-
-        .detection-decision {
-            padding-top: 0.5rem;
-            border-top: 1px solid var(--border-color);
-            font-size: 0.8rem;
-        }
-
-        .decision-label {
-            color: var(--accent-purple);
-            font-weight: 600;
-            font-size: 0.7rem;
-            margin-bottom: 0.2rem;
-        }
-
-        .decision-text {
-            color: var(--text-secondary);
-            line-height: 1.4;
-        }
-
-        .phase-monitor-row {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0.5rem;
-        }
-
-        .phase-monitor-item {
-            background: var(--bg-card);
-            border-radius: 6px;
-            padding: 0.5rem;
-            text-align: center;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-            border: 1px solid var(--border-color);
-            transition: all 0.3s;
-        }
-
-        .phase-monitor-item.active {
-            border-color: var(--success);
-            color: var(--success);
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .phase-monitor-item.inactive {
-            opacity: 0.3;
-            border-color: var(--border-color);
-        }
-
-        .phase-monitor-item.neutral {
-            border-color: var(--warning);
-            color: var(--warning);
-        }
-
-        .pm-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--success);
-            margin: 0 auto 0.25rem;
-            box-shadow: 0 0 6px var(--success);
-        }
-
-        .pm-indicator.neutral {
-            background: var(--warning);
-            box-shadow: 0 0 6px var(--warning);
-        }
-
-        .pm-indicator.off {
-            background: var(--border-color);
-            box-shadow: none;
-        }
-        /* Session 3: Temperature */
-        .temp-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-        }
-
-        .temp-card {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .temp-card::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--success);
-            transition: background 0.3s;
-        }
-
-        .temp-card.warning::after { background: var(--warning); }
-        .temp-card.danger::after { background: var(--danger); }
-
-        .temp-value {
-            font-size: 2rem;
-            font-weight: 700;
-            font-family: 'Courier New', monospace;
-            margin: 0.5rem 0;
-        }
-
-        .temp-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        /* Session 4: Graphs */
-        .chart-container {
-            position: relative;
-            height: 150px;
-            margin-bottom: 1rem;
-        }
-
-        .chart-title {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-
-        /* Session 5: Health Indicators */
-        .health-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-        }
-
-        .health-card {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-            border: 2px solid transparent;
-            transition: all 0.3s;
-        }
-
-        .health-card.normal { border-color: var(--success); box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
-        .health-card.warning { border-color: var(--warning); box-shadow: 0 0 20px rgba(245, 158, 11, 0.2); }
-        .health-card.fault { border-color: var(--danger); box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); animation: faultPulse 2s infinite; }
-
-        @keyframes faultPulse {
-            0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
-            50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.6); }
-        }
-
-        .health-light {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            margin: 0 auto 0.75rem;
-            background: var(--success);
-            box-shadow: 0 0 20px currentColor;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .health-light::after {
-            content: '';
-            position: absolute;
-            top: 15%;
-            left: 15%;
-            width: 25%;
-            height: 25%;
-            background: rgba(255,255,255,0.6);
-            border-radius: 50%;
-        }
-
-        .health-card.warning .health-light { background: var(--warning); }
-        .health-card.fault .health-light { background: var(--danger); animation: lightBlink 1s infinite; }
-
-        @keyframes lightBlink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        .health-phase {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .health-status {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-        }
-
-        /* Session 6: AI & Messages */
-        .ai-section {
-            grid-column: span 3;
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 1.5rem;
-        }
-
-        .ticker-container {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 1rem;
-            border-left: 4px solid var(--accent-cyan);
-        }
-
-        .ticker-header {
-            font-size: 0.75rem;
-            color: var(--accent-cyan);
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        .ticker-content {
-            height: 120px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
-            line-height: 1.6;
-        }
-
-        .ticker-item {
-            padding: 0.5rem;
-            margin-bottom: 0.5rem;
-            background: rgba(6, 182, 212, 0.1);
-            border-radius: 4px;
-            border-left: 2px solid var(--accent-cyan);
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateX(-20px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        .ticker-time {
-            color: var(--text-secondary);
-            font-size: 0.75rem;
-        }
-
-        .ai-prediction {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 1.5rem;
-            text-align: center;
-            border: 1px solid var(--border-color);
-        }
-
-        .rul-circle {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            border: 8px solid var(--bg-dark);
-            border-top-color: var(--primary);
-            margin: 1rem auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            position: relative;
-            animation: rotate 10s linear infinite;
-        }
-
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .rul-text {
-            animation: counterRotate 10s linear infinite;
-        }
-
-        @keyframes counterRotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(-360deg); }
-        }
-
-        .anomaly-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-        }
-
-        .anomaly-normal { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-        .anomaly-detected { background: rgba(239, 68, 68, 0.2); color: var(--danger); animation: pulse 2s infinite; }
-
-        /* Controls Section */
-        .controls-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        .control-card {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 1.5rem;
-            text-align: center;
-            border: 2px solid var(--border-color);
-            transition: all 0.3s;
-        }
-
-        .control-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        .control-label {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-
-        .toggle-btn {
-            width: 80px;
-            height: 40px;
-            border-radius: 20px;
-            border: none;
-            background: var(--bg-dark);
-            position: relative;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
-        }
-
-        .toggle-btn.active {
-            background: var(--success);
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
-        }
-
-        .toggle-btn::after {
-            content: '';
-            position: absolute;
-            top: 4px;
-            left: 4px;
-            width: 32px;
-            height: 32px;
-            background: white;
-            border-radius: 50%;
-            transition: transform 0.3s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .toggle-btn.active::after {
-            transform: translateX(40px);
-        }
-
-        .gpio-info {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-            font-family: monospace;
-        }
-
-        .reset-btn {
-            background: var(--danger);
-            color: white;
-            border: none;
-            padding: 0.75rem 2rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            display: none;
-            margin-top: 1rem;
-            transition: all 0.3s;
-        }
-
-        .reset-btn:hover {
-            background: #dc2626;
-            transform: scale(1.05);
-        }
-
-        .reset-btn.show {
-            display: inline-block;
-        }
-
-        /* Forecast Chart */
-        .forecast-container {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .forecast-title {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .forecast-title::before {
-            content: '🔮';
-        }
-
-        /* Responsive */
-        @media (max-width: 1400px) {
-            .dashboard-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            .ai-section {
-                grid-column: span 2;
-            }
-        }
-
-        @media (max-width: 1024px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            .ai-section {
-                grid-column: span 1;
-                grid-template-columns: 1fr;
-            }
-            .controls-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* Loading overlay */
-        .loading {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-dark);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            transition: opacity 0.5s;
-        }
-
-        .loading.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .loader {
-            width: 50px;
-            height: 50px;
-            border: 3px solid var(--border-color);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Auto-shifting notification */
-        .notification {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            background: var(--warning);
-            color: #000;
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transform: translateX(400px);
-            transition: transform 0.3s;
-            z-index: 99;
-        }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .fault-classification {
-            margin-top: 1rem;
-            padding: 0.75rem;
-            background: rgba(139, 92, 246, 0.1);
-            border-radius: 6px;
-            border-left: 3px solid var(--accent-purple);
-        }
-
-        .fault-label {
-            font-size: 0.75rem;
-            color: var(--accent-purple);
-            font-weight: 600;
-        }
-
-        .fault-value {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-top: 0.25rem;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body { background: var(--bg-base); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.3s, color 0.3s; }
+
+        /* EMERGENCY STROBE ANIMATION */
+        .strobe-active { animation: emergencyRed 1.5s infinite; }
+        @keyframes emergencyRed { 
+            0%, 100% { background-color: var(--bg-base); } 
+            50% { background-color: #450a0a; } 
+        }
+
+        header { background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; z-index: 10; transition: background-color 0.3s, border-color 0.3s; }
+        .header-title { font-size: 1.4rem; font-weight: bold; color: var(--accent-blue); display: flex; align-items: center; gap: 10px; }
+        .header-subtitle { font-size: 0.8rem; color: var(--text-muted); font-weight: normal; }
+        
+        .workspace { display: grid; grid-template-columns: 280px 1fr 350px; grid-template-rows: 1fr; height: calc(100vh - 65px); gap: 15px; padding: 15px; }
+        
+        .panel-column { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 5px; }
+        .panel-column::-webkit-scrollbar { width: 6px; }
+        .panel-column::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        .card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; padding: 15px; display: flex; flex-direction: column; gap: 10px; transition: background-color 0.3s, border-color 0.3s; }
+        .card-title { font-size: 0.95rem; font-weight: bold; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 8px; display: flex; justify-content: space-between; transition: border-color 0.3s;}
+        
+        .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .metric-box { background: var(--bg-panel); padding: 10px; border-radius: 6px; border: 1px solid var(--border); transition: background-color 0.3s, border-color 0.3s;}
+        .metric-val { font-size: 1.4rem; font-weight: bold; font-family: 'Courier New', monospace; transition: color 0.3s;}
+        .metric-lbl { font-size: 0.75rem; color: var(--text-muted); transition: color 0.3s;}
+
+        .phase-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .phase-card { background: var(--bg-panel); border-radius: 8px; padding: 12px; border-top: 4px solid var(--border); transition: opacity 0.3s, background-color 0.3s;}
+        .p-a { border-top-color: var(--accent-red); }
+        .p-b { border-top-color: var(--accent-yellow); }
+        .p-c { border-top-color: var(--accent-blue); }
+        .data-row { display: flex; justify-content: space-between; font-size: 0.85rem; margin-top: 5px; border-bottom: 1px dashed rgba(139,148,158,0.2); padding-bottom: 2px;}
+
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .btn { padding: 8px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s; color: white; }
+        .btn-kill { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--accent-red); color: var(--accent-red); grid-column: span 2; }
+        .btn-kill:hover { background: var(--accent-red); color: white; }
+        .btn-toggle { background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); transition: background-color 0.3s, border-color 0.3s, color 0.3s;}
+        .btn-toggle.active { background: var(--accent-green); border-color: var(--accent-green); color: white;}
+        .btn-toggle.inactive { background: rgba(239, 68, 68, 0.2); border-color: var(--accent-red); color: var(--accent-red); }
+
+        .auth-select { background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); padding: 5px; border-radius: 4px; width: 100%; margin-top: 5px; cursor: pointer; outline: none; transition: background-color 0.3s, border-color 0.3s, color 0.3s;}
+        .worker-input-group { display: flex; gap: 5px; margin-top: 5px; }
+        .worker-input-group input { flex-grow: 1; padding: 5px; background: var(--bg-base); border: 1px solid var(--border); color: var(--text-main); border-radius: 4px; outline: none; transition: background-color 0.3s, border-color 0.3s, color 0.3s;}
+
+        .alert-banner { background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--accent-yellow); padding: 12px; border-radius: 4px; font-size: 0.9rem; }
+        .log-terminal { background: #000; color: #0f0; font-family: 'Courier New', monospace; font-size: 0.8rem; padding: 10px; border-radius: 6px; height: 180px; overflow-y: auto; display: flex; flex-direction: column-reverse;}
+        
+        .slider-group { margin-top: 10px; }
+        .slider-group label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; }
+        input[type="range"] { width: 100%; accent-color: var(--accent-blue); }
+        .admin-action { background: var(--accent-blue); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; text-align: center; font-weight: bold; margin-top: 5px;}
+
+        .chart-box { width: 100%; position: relative; }
+        .chart-box-mini { height: 60px; width: 100%; position: relative; }
+        .chart-box-large { height: 160px; width: 100%; position: relative; }
     </style>
-<base target="_blank">
 </head>
 <body>
-    <div class="loading" id="loading">
-        <div class="loader"></div>
-    </div>
 
-    <div class="notification" id="notification">
-        ⚡ Auto-Shifting Load to Phase L2...
-    </div>
-
-    <header class="header">
-        <div>
-            <h1>🔌 IPMS</h1>
+    <header>
+        <div class="header-title">
+            ⚡ Intelligent Predictive Maintenance Panel
+            <span class="header-subtitle">Multi-Modal AI Diagnostics | ESP32 Node</span>
         </div>
-        <div class="status-bar">
-            <div class="connection-status">
-                <div class="pulse-dot"></div>
-                <span>AWS Cloud Sync: ACTIVE</span>
-            </div>
-            <div class="connection-status">
-                <span>Last Update: <span id="lastUpdate">Just now</span></span>
-            </div>
-            <div class="master-trip" id="masterTrip">
-                ⚠️ MASTER TRIP - SAFETY SHUTDOWN
-            </div>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <span style="color: var(--accent-red); font-size: 0.85rem; font-weight: bold;" id="sysStatus">🔴 Backend Offline</span>
+            <div style="background: var(--bg-panel); padding: 5px 15px; border-radius: 20px; font-family: monospace;" id="clock">00:00:00</div>
         </div>
     </header>
 
-    <div class="container">
-        <div class="dashboard-grid">
-            <!-- Session 1: Electrical Readings -->
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">
-                        <svg class="panel-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
-                        Electrical Parameters (12 Channels)
-                    </div>
-                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Updates every 2s</span>
-                </div>
-                <div class="electrical-grid">
-                    <div class="phase-group">
-                        <div class="phase-label">MAIN PHASES</div>
-                        <div class="gauge-row">
-                            <div class="gauge">
-                                <div class="gauge-value" id="vL1">230.4</div>
-                                <div class="gauge-unit">V</div>
-                                <div class="gauge-label" id="label-vL1">L1 Voltage</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="iL1">45.2</div>
-                                <div class="gauge-unit">A</div>
-                                <div class="gauge-label" id="label-iL1">L1 Current</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="pL1">10.4</div>
-                                <div class="gauge-unit">kW</div>
-                                <div class="gauge-label" id="label-pL1">L1 Power</div>
-                            </div>
-                        </div>
-                        <div class="gauge-row">
-                            <div class="gauge">
-                                <div class="gauge-value" id="vL2">229.8</div>
-                                <div class="gauge-unit">V</div>
-                                <div class="gauge-label" id="label-vL2">L2 Voltage</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="iL2">42.8</div>
-                                <div class="gauge-unit">A</div>
-                                <div class="gauge-label" id="label-iL2">L2 Current</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="pL2">9.8</div>
-                                <div class="gauge-unit">kW</div>
-                                <div class="gauge-label" id="label-pL2">L2 Power</div>
-                            </div>
-                        </div>
-                        <div class="gauge-row">
-                            <div class="gauge">
-                                <div class="gauge-value" id="vL3">231.1</div>
-                                <div class="gauge-unit">V</div>
-                                <div class="gauge-label" id="label-vL3">L3 Voltage</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="iL3">44.1</div>
-                                <div class="gauge-unit">A</div>
-                                <div class="gauge-label" id="label-iL3">L3 Current</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="pL3">10.2</div>
-                                <div class="gauge-unit">kW</div>
-                                <div class="gauge-label" id="label-pL3">L3 Power</div>
-                            </div>
-                        </div>
-                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 0.75rem;">
-                            <span>THD: <span id="thdMain">2.4%</span></span>
-                            <span>PF: <span id="pfMain">0.95</span></span>
-                            <span>Imbalance: <span id="imbMain">1.2%</span></span>
-                        </div>
-                    </div>
-                    <div class="phase-group branch">
-                        <div class="phase-label">BRANCH CIRCUITS</div>
-                        <div class="gauge-row">
-                            <div class="gauge">
-                                <div class="gauge-value" id="vbL1">228.5</div>
-                                <div class="gauge-unit">V</div>
-                                <div class="gauge-label">Br L1</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="ibL1">18.4</div>
-                                <div class="gauge-unit">A</div>
-                                <div class="gauge-label">Br L1</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="pbL1">4.2</div>
-                                <div class="gauge-unit">kW</div>
-                                <div class="gauge-label">Br L1</div>
-                            </div>
-                        </div>
-                        <div class="gauge-row">
-                            <div class="gauge">
-                                <div class="gauge-value" id="vbL2">229.2</div>
-                                <div class="gauge-unit">V</div>
-                                <div class="gauge-label">Br L2</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="ibL2">17.9</div>
-                                <div class="gauge-unit">A</div>
-                                <div class="gauge-label">Br L2</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="pbL2">4.1</div>
-                                <div class="gauge-unit">kW</div>
-                                <div class="gauge-label">Br L2</div>
-                            </div>
-                        </div>
-                        <div class="gauge-row">
-                            <div class="gauge">
-                                <div class="gauge-value" id="vbL3">230.0</div>
-                                <div class="gauge-unit">V</div>
-                                <div class="gauge-label">Br L3</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="ibL3">19.1</div>
-                                <div class="gauge-unit">A</div>
-                                <div class="gauge-label">Br L3</div>
-                            </div>
-                            <div class="gauge">
-                                <div class="gauge-value" id="pbL3">4.4</div>
-                                <div class="gauge-unit">kW</div>
-                                <div class="gauge-label">Br L3</div>
-                            </div>
-                        </div>
-                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 0.75rem;">
-                            <span>THD: <span id="thdBranch">3.1%</span></span>
-                            <span>PF: <span id="pfBranch">0.93</span></span>
-                            <span>Total: <span id="totalPower">30.4 kW</span></span>
-                        </div>
-                    </div>
+    <div class="workspace">
+        
+        <div class="panel-column">
+            <div class="card" style="border-color: var(--accent-purple);">
+                <div class="card-title">🛡️ Authentication Profile</div>
+                <select class="auth-select" id="operatorSelect" onchange="switchOperator()">
+                    <option value="Admin">Admin (Full Access)</option>
+                    <option value="Worker 1">Worker 1 (Maintenance)</option>
+                    <option value="Worker 2">Worker 2 (Observer)</option>
+                </select>
+                <div class="worker-input-group">
+                    <input type="text" id="newWorkerName" placeholder="Add new worker...">
+                    <button class="btn btn-toggle" onclick="addWorker()" style="padding: 5px 10px;">Add</button>
                 </div>
             </div>
 
-            <!-- Session 2: Load Type Selector & AI Detection -->
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">
-                        <svg class="panel-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-                        </svg>
-                        Load Type Configuration
-                    </div>
-                    <span style="font-size: 0.75rem; color: var(--accent-cyan);">AI-Powered Detection</span>
+            <div class="card">
+                <div class="card-title">⚙️ Hardware Deployment & UI</div>
+                <div style="display: flex; gap: 10px; margin-bottom: 5px;">
+                    <input type="radio" name="mode" id="m1" checked onchange="switchMode('3-Phase')"> <label for="m1">3-Phase Mode</label>
+                    <input type="radio" name="mode" id="m2" onchange="switchMode('1-Phase')"> <label for="m2">1-Phase Mode</label>
                 </div>
-
-                <!-- Load Type Selection -->
-                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                    Select your load configuration:
-                </div>
-                <div class="loadtype-selector">
-                    <button class="loadtype-btn" id="btnSinglePhase" onclick="selectLoadType('single')">
-                        <div class="loadtype-icon">
-                            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <div class="loadtype-name">Single Phase</div>
-                        <div class="loadtype-desc">L1 + Neutral</div>
-                    </button>
-                    <button class="loadtype-btn active" id="btnThreePhase" onclick="selectLoadType('three')">
-                        <div class="loadtype-icon">
-                            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-                            </svg>
-                        </div>
-                        <div class="loadtype-name">Three Phase</div>
-                        <div class="loadtype-desc">L1, L2, L3</div>
-                    </button>
-                </div>
-
-                <!-- AI Detection Result -->
-                <div class="ai-detection-box" id="aiDetectionBox">
-                    <div class="ai-detection-header">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                        </svg>
-                        AI System Detection
-                    </div>
-                    <div class="ai-detection-result">
-                        <div class="detection-indicator" id="detectionIndicator">
-                            <div class="detection-pulse three-phase" id="detectionPulse"></div>
-                        </div>
-                        <div class="detection-info">
-                            <div class="detection-value" id="aiDetectedType">Three Phase System</div>
-                            <div class="detection-confidence" id="aiConfidence">AI Confidence: 97.4%</div>
-                        </div>
-                    </div>
-                    <div class="detection-decision" id="detectionDecision">
-                        <div class="decision-label">AI Decision:</div>
-                        <div class="decision-text" id="aiDecisionText">Monitoring all 3 phases with independent fault detection and load balancing</div>
-                    </div>
-                </div>
-
-                <!-- Phase Status Overview -->
-                <div style="margin-top: 0.75rem;">
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Active Phase Monitoring:</div>
-                    <div class="phase-monitor-row" id="phaseMonitorRow">
-                        <div class="phase-monitor-item active" id="pmL1">
-                            <div class="pm-indicator" id="pmiL1"></div>
-                            <span>L1</span>
-                        </div>
-                        <div class="phase-monitor-item active" id="pmL2">
-                            <div class="pm-indicator" id="pmiL2"></div>
-                            <span>L2</span>
-                        </div>
-                        <div class="phase-monitor-item active" id="pmL3">
-                            <div class="pm-indicator" id="pmiL3"></div>
-                            <span>L3</span>
-                        </div>
-                        <div class="phase-monitor-item neutral" id="pmN">
-                            <div class="pm-indicator neutral" id="pmiN"></div>
-                            <span>N</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Session 3: Temperature -->
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">
-                        <svg class="panel-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
-                        Contact Point Temperatures
-                    </div>
-                </div>
-                <div class="temp-grid">
-                    <div class="temp-card" id="tempL1">
-                        <div class="temp-label">L1 LUG</div>
-                        <div class="temp-value" id="valL1">45.2°C</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Terminal A1</div>
-                    </div>
-                    <div class="temp-card" id="tempL2">
-                        <div class="temp-label">L2 LUG</div>
-                        <div class="temp-value" id="valL2">43.8°C</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Terminal A2</div>
-                    </div>
-                    <div class="temp-card" id="tempL3">
-                        <div class="temp-label">L3 LUG</div>
-                        <div class="temp-value" id="valL3">46.1°C</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Terminal A3</div>
-                    </div>
-                    <div class="temp-card" id="tempAmb">
-                        <div class="temp-label">AMBIENT</div>
-                        <div class="temp-value" id="valAmb">24.5°C</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Panel Internal</div>
-                    </div>
-                </div>
-                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem;">
-                        <span>Vibration (Contactor):</span>
-                        <span style="font-family: monospace; color: var(--accent-cyan);" id="vibration">0.42 m/s²</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; margin-top: 0.5rem;">
-                        <span>Acoustic (Arcing Det.):</span>
-                        <span style="font-family: monospace; color: var(--accent-purple);" id="acoustic">42.3 dB</span>
-                    </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+                    <button class="btn btn-toggle" style="padding: 5px; font-size: 0.70rem;" onclick="setTheme('default')">Dark</button>
+                    <button class="btn btn-toggle" style="padding: 5px; font-size: 0.70rem;" onclick="setTheme('oled')">OLED</button>
+                    <button class="btn btn-toggle" style="padding: 5px; font-size: 0.70rem;" onclick="setTheme('slate')">Slate</button>
+                    <button class="btn btn-toggle" style="padding: 5px; font-size: 0.70rem;" onclick="setTheme('light')">Light</button>
                 </div>
             </div>
 
-            <!-- Session 4: Graphs -->
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">
-                        <svg class="panel-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
-                        </svg>
-                        Trend Analysis
-                    </div>
+            <div class="card">
+                <div class="card-title">🔒 Protection Parameters</div>
+                <div class="slider-group">
+                    <label>Max Voltage Limit (V) <span id="vLimit">240</span></label>
+                    <input type="range" min="220" max="260" value="240" oninput="document.getElementById('vLimit').innerText = this.value; triggerInstantDiagnostics();">
                 </div>
-                <div class="chart-title">Voltage vs Current History (Last 60s)</div>
-                <div class="chart-container">
-                    <canvas id="trendChart"></canvas>
+                <div class="slider-group">
+                    <label>Max Current Limit (A) <span id="cLimit">6</span></label>
+                    <input type="range" min="3" max="60" value="6" oninput="document.getElementById('cLimit').innerText = this.value; triggerInstantDiagnostics();">
                 </div>
-                <div class="chart-title">Harmonic Distortion (THD) Profile</div>
-                <div class="chart-container">
-                    <canvas id="harmonicChart"></canvas>
+                <div class="slider-group">
+                    <label>Max Temp Limit (°C) <span id="tLimit">30</span></label>
+                    <input type="range" min="25" max="80" value="30" oninput="document.getElementById('tLimit').innerText = this.value; triggerInstantDiagnostics();">
                 </div>
-            </div>
-
-            <!-- Session 5: Health Indicators -->
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">
-                        <svg class="panel-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Per-Phase Health Status
-                    </div>
+                <div class="slider-group">
+                    <label>Max Humidity (DHT22) (%) <span id="hLimit">80</span></label>
+                    <input type="range" min="40" max="100" value="80" oninput="document.getElementById('hLimit').innerText = this.value; triggerInstantDiagnostics();">
                 </div>
-                <div class="health-grid">
-                    <div class="health-card normal" id="healthL1">
-                        <div class="health-light"></div>
-                        <div class="health-phase">PHASE L1</div>
-                        <div class="health-status" id="statusL1">NORMAL</div>
-                    </div>
-                    <div class="health-card normal" id="healthL2">
-                        <div class="health-light"></div>
-                        <div class="health-phase">PHASE L2</div>
-                        <div class="health-status" id="statusL2">NORMAL</div>
-                    </div>
-                    <div class="health-card normal" id="healthL3">
-                        <div class="health-light"></div>
-                        <div class="health-phase">PHASE L3</div>
-                        <div class="health-status" id="statusL3">NORMAL</div>
-                    </div>
+                <div class="slider-group">
+                    <label>Max Smoke Index (AQI) <span id="sLimit">400</span></label>
+                    <input type="range" min="100" max="800" value="400" oninput="document.getElementById('sLimit').innerText = this.value; triggerInstantDiagnostics();">
                 </div>
-                <div class="forecast-container">
-                    <div class="forecast-title">AI Temperature Forecast (Next 4 Hours)</div>
-                    <div class="chart-container" style="height: 100px;">
-                        <canvas id="forecastChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Session 6: AI & Messages -->
-            <div class="ai-section">
-                <div class="ticker-container">
-                    <div class="ticker-header">🤖 AI LIVE TICKER & MAINTENANCE ALERTS</div>
-                    <div class="ticker-content" id="ticker">
-                        <div class="ticker-item">
-                            <div class="ticker-time">14:32:05</div>
-                            <div>System initialized. All sensors calibrated.</div>
-                        </div>
-                        <div class="ticker-item">
-                            <div class="ticker-time">14:32:00</div>
-                            <div>Baseline thermal profile established for breaker bank.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="ai-prediction">
-                    <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.5rem;">REMAINING USEFUL LIFE</div>
-                    <div class="rul-circle">
-                        <div class="rul-text" id="rulValue">12d</div>
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Maintenance suggested in 12 days</div>
-                    
-                    <div class="anomaly-badge anomaly-normal" id="anomalyBadge">
-                        NORMAL PATTERN
-                    </div>
-
-                    <div class="fault-classification">
-                        <div class="fault-label">FAULT CLASSIFICATION</div>
-                        <div class="fault-value" id="faultValue">NO FAULT DETECTED</div>
-                    </div>
-
-                    <button class="reset-btn" id="resetBtn" onclick="resetSystem()">
-                        🔓 RESET MASTER TRIP
-                    </button>
-                </div>
-
-                <div style="background: var(--bg-card); border-radius: 8px; padding: 1rem; border: 1px solid var(--border-color);">
-                    <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem; font-weight: 600;">SENSOR FUSION STATUS</div>
-                    <div style="display: grid; gap: 0.75rem; font-size: 0.8rem;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span>Load Type AI Detection</span>
-                            <span style="color: var(--success);">● Active</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span>Current Transformers</span>
-                            <span style="color: var(--success);">● Active</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span>Vibration Sensor</span>
-                            <span style="color: var(--success);">● Active</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span>Acoustic Array</span>
-                            <span style="color: var(--success);">● Active</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span>ADS1115 Modules</span>
-                            <span style="color: var(--success);">● 4x Online</span>
-                        </div>
-                    </div>
-                </div>
+                <button class="admin-action" style="background: var(--accent-green);" onclick="logEvent('AI Protection Engine Updated.'); speakOutLoud('Protection parameters saved.');">🚀 Deploy AI Protection Engine</button>
             </div>
         </div>
 
-        <!-- Control Section -->
-        <div class="panel">
-            <div class="panel-header">
-                <div class="panel-title">
-                    <svg class="panel-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
-                    </svg>
-                    Control & Automation (GPIO Interface)
+        <div class="panel-column">
+            
+            <div class="card">
+                <div class="card-title">
+                    <span>📊 System Master Telemetry & Controls</span>
                 </div>
-                <span style="font-size: 0.75rem; color: var(--warning);">⚠️ Manual override active</span>
-            </div>
-            <div class="controls-grid">
-                <div class="control-card">
-                    <div class="control-label">MAIN CONTACTOR</div>
-                    <button class="toggle-btn active" id="btnMain" onclick="toggleControl('main')"></button>
-                    <div class="gpio-info">GPIO 17 (Pin 11)</div>
-                    <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--success);" id="statusMain">● ENERGIZED</div>
+                <div class="btn-group" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 10px;">
+                    <button class="btn btn-kill" id="btnMaster" onclick="masterTripToggle()">⚠ EMERGENCY TRIP</button>
+                    <button class="btn btn-toggle active" id="btnA" onclick="togglePhase('A')">Phase A ON</button>
+                    <button class="btn btn-toggle active" id="btnB" onclick="togglePhase('B')">Phase B ON</button>
+                    <button class="btn btn-toggle active" id="btnC" onclick="togglePhase('C')">Phase C ON</button>
                 </div>
-                <div class="control-card">
-                    <div class="control-label">L1 BRANCH</div>
-                    <button class="toggle-btn active" id="btnL1" onclick="toggleControl('l1')"></button>
-                    <div class="gpio-info">GPIO 27 (Pin 13)</div>
-                    <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--success);" id="statusL1Btn">● CLOSED</div>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+                    <div><span style="font-size: 0.7rem; color: var(--accent-red);">MC1 Logic State</span><div class="chart-box-mini"><canvas id="stateA"></canvas></div></div>
+                    <div><span style="font-size: 0.7rem; color: var(--accent-yellow);">MC2 Logic State</span><div class="chart-box-mini"><canvas id="stateB"></canvas></div></div>
+                    <div><span style="font-size: 0.7rem; color: var(--accent-blue);">MC3 Logic State</span><div class="chart-box-mini"><canvas id="stateC"></canvas></div></div>
                 </div>
-                <div class="control-card">
-                    <div class="control-label">L2 BRANCH</div>
-                    <button class="toggle-btn active" id="btnL2" onclick="toggleControl('l2')"></button>
-                    <div class="gpio-info">GPIO 22 (Pin 15)</div>
-                    <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--success);" id="statusL2Btn">● CLOSED</div>
-                </div>
-                <div class="control-card">
-                    <div class="control-label">L3 BRANCH</div>
-                    <button class="toggle-btn active" id="btnL3" onclick="toggleControl('l3')"></button>
-                    <div class="gpio-info">GPIO 23 (Pin 16)</div>
-                    <div style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--success);" id="statusL3Btn">● CLOSED</div>
+
+                <div class="metric-grid">
+                    <div class="metric-box"><div class="metric-lbl">Avg Voltage</div><div class="metric-val" id="m_v">220.0<span style="font-size:10px">V</span></div></div>
+                    <div class="metric-box"><div class="metric-lbl">Total Current</div><div class="metric-val" id="m_c">13.5<span style="font-size:10px">A</span></div></div>
+                    <div class="metric-box"><div class="metric-lbl">Amb. Temp</div><div class="metric-val" id="m_t">28.0<span style="font-size:10px">°C</span></div></div>
+                    <div class="metric-box"><div class="metric-lbl">Humidity</div><div class="metric-val" id="m_h" style="color: var(--accent-blue);">45.0<span style="font-size:10px">%</span></div></div>
+                    
+                    <div class="metric-box" style="border-color: var(--accent-purple);"><div class="metric-lbl">Grid Frequency</div><div class="metric-val" id="m_hz" style="color: var(--accent-purple);">50.00<span style="font-size:10px">Hz</span></div></div>
+                    
+                    <div class="metric-box" style="border-color: var(--accent-yellow);"><div class="metric-lbl">Smoke Index</div><div class="metric-val" id="m_smoke">205<span style="font-size:10px">AQI</span></div></div>
                 </div>
             </div>
+
+            <div class="phase-row">
+                <div class="phase-card p-a" id="cardA">
+                    <div style="font-weight: bold; margin-bottom: 10px; color: var(--accent-red);">L1 Breaker (Phase A)</div>
+                    <div class="data-row"><span>Voltage</span><strong id="vA">220.0 V</strong></div>
+                    <div class="data-row"><span>Current</span><strong id="iA">4.5 A</strong></div>
+                    <div class="data-row"><span>Temp (DS18B20)</span><strong id="tA">28.5 °C</strong></div>
+                    <div class="data-row"><span>Power Factor</span><strong id="pfA">0.92</strong></div>
+                    <div class="data-row"><span>Apparent Power</span><strong id="kVA_A">1.0 kVA</strong></div>
+                </div>
+                <div class="phase-card p-b" id="cardB">
+                    <div style="font-weight: bold; margin-bottom: 10px; color: var(--accent-yellow);">L2 Breaker (Phase B)</div>
+                    <div class="data-row"><span>Voltage</span><strong id="vB">220.0 V</strong></div>
+                    <div class="data-row"><span>Current</span><strong id="iB">4.5 A</strong></div>
+                    <div class="data-row"><span>Temp (DS18B20)</span><strong id="tB">28.2 °C</strong></div>
+                    <div class="data-row"><span>Power Factor</span><strong id="pfB">0.91</strong></div>
+                    <div class="data-row"><span>Apparent Power</span><strong id="kVA_B">1.0 kVA</strong></div>
+                </div>
+                <div class="phase-card p-c" id="cardC">
+                    <div style="font-weight: bold; margin-bottom: 10px; color: var(--accent-blue);">L3 Breaker (Phase C)</div>
+                    <div class="data-row"><span>Voltage</span><strong id="vC">220.0 V</strong></div>
+                    <div class="data-row"><span>Current</span><strong id="iC">4.5 A</strong></div>
+                    <div class="data-row"><span>Temp (DS18B20)</span><strong id="tC">28.6 °C</strong></div>
+                    <div class="data-row"><span>Power Factor</span><strong id="pfC">0.93</strong></div>
+                    <div class="data-row"><span>Apparent Power</span><strong id="kVA_C">1.0 kVA</strong></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">〰️ Telemetry & Oscilloscope Matrix</div>
+                
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                    <div>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">Combined 3-Phase Oscilloscope</span>
+                        <div class="chart-box-large"><canvas id="waveformChart"></canvas></div>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">Frequency Spectrum (FFT)</span>
+                        <div class="chart-box-large"><canvas id="fftChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                    <div>
+                        <span style="font-size: 0.8rem; color: var(--accent-red);">Phase A (Isolated)</span>
+                        <div class="chart-box" style="height: 100px;"><canvas id="waveA"></canvas></div>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.8rem; color: var(--accent-yellow);">Phase B (Isolated)</span>
+                        <div class="chart-box" style="height: 100px;"><canvas id="waveB"></canvas></div>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.8rem; color: var(--accent-blue);">Phase C (Isolated)</span>
+                        <div class="chart-box" style="height: 100px;"><canvas id="waveC"></canvas></div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                    <div>
+                        <span style="font-size: 0.8rem; color: var(--accent-red);">Phase A (V-I Curve)</span>
+                        <div class="chart-box" style="height: 120px;"><canvas id="viChartA"></canvas></div>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.8rem; color: var(--accent-yellow);">Phase B (V-I Curve)</span>
+                        <div class="chart-box" style="height: 120px;"><canvas id="viChartB"></canvas></div>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.8rem; color: var(--accent-blue);">Phase C (V-I Curve)</span>
+                        <div class="chart-box" style="height: 120px;"><canvas id="viChartC"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="panel-column">
+            
+            <div class="card">
+                <div class="card-title">🧠 System Health Indices</div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="data-row" style="border:none;"><span>Electrical Health</span><strong style="color: var(--accent-green);">98%</strong></div>
+                    <div style="width: 100%; background: var(--bg-base); height: 6px; border-radius: 3px;"><div style="width: 98%; background: var(--accent-green); height: 100%; border-radius: 3px;"></div></div>
+                    
+                    <div class="data-row" style="border:none; margin-top: 5px;"><span>Thermal Health</span><strong style="color: var(--accent-yellow);">85%</strong></div>
+                    <div style="width: 100%; background: var(--bg-base); height: 6px; border-radius: 3px;"><div style="width: 85%; background: var(--accent-yellow); height: 100%; border-radius: 3px;"></div></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">🔧 Predictive Maintenance Timeline</div>
+                <ul style="font-size: 0.85rem; padding-left: 20px; color: var(--text-main); display: flex; flex-direction: column; gap: 10px;" id="suggestionsBox">
+                    <li>Initializing AI Diagnostics...</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📑 System Actions & Audit</div>
+                <button class="btn btn-toggle" style="margin-bottom: 5px; width: 100%; border-color: var(--accent-blue);" onclick="generateReport()">📄 Generate PQ Audit Report</button>
+                <div class="btn-group">
+                    <button class="btn btn-toggle" onclick="window.print()">Print Dashboard</button>
+                    <button class="btn btn-toggle" onclick="clearCache()">Clear Cache</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📢 Voice Assistant Control</div>
+                <button class="btn btn-toggle active" id="btnVoice" onclick="toggleVoice()" style="width: 100%; border-color: var(--accent-green);">🔊 Voice Assistant: ON</button>
+            </div>
+
+            <div class="card" style="flex-grow: 1;">
+                <div class="card-title">⬛ Blackbox Fault Logger</div>
+                <div class="log-terminal" id="terminal">
+                    </div>
+            </div>
+
         </div>
     </div>
 
     <script>
-        // System State
-        const state = {
-            controls: {
-                main: true,
-                l1: true,
-                l2: true,
-                l3: true
-            },
-            tripped: false,
-            anomaly: false,
-            health: {
-                L1: 'normal',
-                L2: 'normal',
-                L3: 'normal'
-            },
-            loadType: 'three'
+        // --- 0. PYTHON BACKEND CONNECTION (WEBSOCKET) ---
+        const ws = new WebSocket("ws://localhost:8000/ws");
+
+        ws.onopen = function() {
+            document.getElementById('sysStatus').innerText = "🟢 Python Backend Connected";
+            document.getElementById('sysStatus').style.color = "var(--accent-green)";
+            logEvent("<span style='color: var(--accent-green);'>Successfully linked to Python WebSocket Server.</span>");
+            speakOutLoud("Python connection established.");
         };
 
-        // Chart instances
-        let trendChart, harmonicChart, forecastChart;
+        ws.onmessage = function(event) {
+            console.log("Data from Python: ", event.data);
+        };
 
-      // Initialize
-        window.onload = function() {
-            setTimeout(() => {
-                document.getElementById('loading').classList.add('hidden');
-            }, 1000);
-            
-            initCharts();
-            startDataSimulation();
-            initLoadTypeSelector();
-        }; // <-- Fixed: Added the closing bracket and semicolon here!
+        ws.onerror = function(error) {
+            document.getElementById('sysStatus').innerText = "🔴 Backend Offline";
+            document.getElementById('sysStatus').style.color = "var(--accent-red)";
+        };
 
-        function initCharts() {
-            const commonOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { 
-                        grid: { color: '#374151' },
-                        ticks: { color: '#9ca3af', font: { size: 10 } }
-                    },
-                    y: { 
-                        grid: { color: '#374151' },
-                        ticks: { color: '#9ca3af', font: { size: 10 } }
-                    }
-                }
-            };
+        ws.onclose = function() {
+            document.getElementById('sysStatus').innerText = "🔴 Backend Offline";
+            document.getElementById('sysStatus').style.color = "var(--accent-red)";
+        };
 
-            // Trend Chart
-            const trendCtx = document.getElementById('trendChart').getContext('2d');
-            trendChart = new Chart(trendCtx, {
-                type: 'line',
-                data: {
-                    labels: Array(30).fill(''),
-                    datasets: [{
-                        label: 'Voltage L1',
-                        data: Array(30).fill(230).map(v => v + (Math.random() - 0.5) * 2),
-                        borderColor: '#3b82f6',
-                        tension: 0.4,
-                        pointRadius: 0
-                    }, {
-                        label: 'Current L1',
-                        data: Array(30).fill(45).map(v => v + (Math.random() - 0.5) * 4),
-                        borderColor: '#f59e0b',
-                        tension: 0.4,
-                        pointRadius: 0,
-                        yAxisID: 'y1'
-                    }]
-                },
-                options: {
-                    ...commonOptions,
-                    scales: {
-                        ...commonOptions.scales,
-                        y1: {
-                            position: 'right',
-                            grid: { display: false },
-                            ticks: { color: '#f59e0b', font: { size: 10 } }
-                        }
-                    }
-                }
-            });
 
-            // Harmonic Chart
-            const harmonicCtx = document.getElementById('harmonicChart').getContext('2d');
-            harmonicChart = new Chart(harmonicCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['1st', '3rd', '5th', '7th', '9th', '11th'],
-                    datasets: [{
-                        label: 'THD %',
-                        data: [100, 2.1, 1.4, 0.8, 0.5, 0.3],
-                        backgroundColor: [
-                            'rgba(59, 130, 246, 0.8)',
-                            'rgba(245, 158, 11, 0.8)',
-                            'rgba(16, 185, 129, 0.8)',
-                            'rgba(139, 92, 246, 0.8)',
-                            'rgba(6, 182, 212, 0.8)',
-                            'rgba(239, 68, 68, 0.8)'
-                        ]
-                    }]
-                },
-                options: commonOptions
-            });
+        // --- 1. CORE VARIABLES & STATE ---
+        let voiceEnabled = true; 
+        let phaseState = { A: true, B: true, C: true, Master: true };
+        let historyData = { A: [], B: [], C: [] };
+        let workerActionHistory = []; 
+        let sysTemp = 28.0; 
+        let sysHum = 45.0; 
+        let smokeAQI = 200.0;
+        let lastSuggestionHTML = ""; 
+        
+        let fireAlarmActive = false;
+        let alarmIntervalTimer = null;
+        
+        for(let i=0; i<20; i++) { historyData.A.push(1); historyData.B.push(1); historyData.C.push(1); }
 
-            // Forecast Chart
-            const forecastCtx = document.getElementById('forecastChart').getContext('2d');
-            forecastChart = new Chart(forecastCtx, {
-                type: 'line',
-                data: {
-                    labels: ['Now', '+1h', '+2h', '+3h', '+4h'],
-                    datasets: [{
-                        label: 'Predicted Temp',
-                        data: [45, 47, 49, 52, 55],
-                        borderColor: '#8b5cf6',
-                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 3
-                    }]
-                },
-                options: commonOptions
-            });
+        function setTheme(theme) {
+            const root = document.documentElement;
+            if (theme === 'default') {
+                root.style.setProperty('--bg-base', '#0f111a'); root.style.setProperty('--bg-surface', '#1a1d2d');
+                root.style.setProperty('--bg-panel', '#222639'); root.style.setProperty('--border', '#31364f');
+                root.style.setProperty('--text-main', '#e2e8f0'); root.style.setProperty('--text-muted', '#8b949e');
+            } else if (theme === 'oled') {
+                root.style.setProperty('--bg-base', '#000000'); root.style.setProperty('--bg-surface', '#0a0a0a');
+                root.style.setProperty('--bg-panel', '#111111'); root.style.setProperty('--border', '#333333');
+                root.style.setProperty('--text-main', '#ffffff'); root.style.setProperty('--text-muted', '#666666');
+            } else if (theme === 'slate') {
+                root.style.setProperty('--bg-base', '#0f172a'); root.style.setProperty('--bg-surface', '#1e293b');
+                root.style.setProperty('--bg-panel', '#334155'); root.style.setProperty('--border', '#475569');
+                root.style.setProperty('--text-main', '#f8fafc'); root.style.setProperty('--text-muted', '#94a3b8');
+            } else if (theme === 'light') {
+                root.style.setProperty('--bg-base', '#f1f5f9'); root.style.setProperty('--bg-surface', '#ffffff');
+                root.style.setProperty('--bg-panel', '#f8fafc'); root.style.setProperty('--border', '#cbd5e1');
+                root.style.setProperty('--text-main', '#0f172a'); root.style.setProperty('--text-muted', '#64748b');
+            }
+            logEvent(`UI Theme updated to ${theme.toUpperCase()} profile.`);
         }
 
-
-        // Load Type Selection & AI Detection
-        function initLoadTypeSelector() {
-            // Initial render based on default (three phase)
-            updateLoadTypeUI(state.loadType);
+        function switchMode(mode) {
+            logEvent(`<span style="color: var(--accent-yellow); font-weight: bold;">DEPLOYMENT RECONFIGURED: Now operating in ${mode} Logic.</span>`);
+            speakOutLoud(`Hardware deployment mode successfully changed to ${mode}.`);
         }
 
-        function selectLoadType(type) {
-            if (state.loadType === type) return;
-
-            const prevType = state.loadType;
-            state.loadType = type;
-
-            // Update UI
-            updateLoadTypeUI(type);
-
-            // AI Detection Simulation
-            simulateAIDetection(type);
-
-            // Update electrical readings based on load type
-            updateElectricalForLoadType(type);
-
-            // Log the change
-            const typeLabel = type === 'single' ? 'Single Phase' : 'Three Phase';
-            addTickerItem(`Load type changed to ${typeLabel} (${type === 'single' ? 'L1+N' : 'L1,L2,L3'}). AI model reconfiguring...`, 'info');
-
-            // Update charts to reflect new phase configuration
-            updateChartsForLoadType(type);
+        function getActiveWorker() {
+            const select = document.getElementById('operatorSelect');
+            return select.options[select.selectedIndex].text;
         }
 
-        function updateLoadTypeUI(type) {
-            const btnSingle = document.getElementById('btnSinglePhase');
-            const btnThree = document.getElementById('btnThreePhase');
+        function addWorker() {
+            const nameInput = document.getElementById('newWorkerName');
+            const newName = nameInput.value.trim();
+            if(newName !== "") {
+                const select = document.getElementById('operatorSelect');
+                const opt = document.createElement('option');
+                opt.value = newName; opt.innerText = newName + " (Custom)";
+                select.appendChild(opt); select.value = newName; 
+                switchOperator(); nameInput.value = ""; 
+            }
+        }
 
-            if (type === 'single') {
-                btnSingle.classList.add('active');
-                btnThree.classList.remove('active');
+        function toggleVoice() {
+            voiceEnabled = !voiceEnabled;
+            const btn = document.getElementById('btnVoice');
+            if(voiceEnabled) {
+                btn.className = "btn btn-toggle active"; btn.style.borderColor = "var(--accent-green)";
+                btn.innerText = "🔊 Voice Assistant: ON"; speakOutLoud("Voice assistant activated.");
             } else {
-                btnThree.classList.add('active');
-                btnSingle.classList.remove('active');
-            }
-
-            // Update phase monitor indicators
-            updatePhaseMonitor(type);
-        }
-
-        function updatePhaseMonitor(type) {
-            const pmL1 = document.getElementById('pmL1');
-            const pmL2 = document.getElementById('pmL2');
-            const pmL3 = document.getElementById('pmL3');
-            const pmiL1 = document.getElementById('pmiL1');
-            const pmiL2 = document.getElementById('pmiL2');
-            const pmiL3 = document.getElementById('pmiL3');
-
-            if (type === 'single') {
-                // L1 active, L2/L3 inactive
-                pmL1.className = 'phase-monitor-item active';
-                pmL2.className = 'phase-monitor-item inactive';
-                pmL3.className = 'phase-monitor-item inactive';
-                pmiL1.className = 'pm-indicator';
-                pmiL2.className = 'pm-indicator off';
-                pmiL3.className = 'pm-indicator off';
-            } else {
-                // All phases active
-                pmL1.className = 'phase-monitor-item active';
-                pmL2.className = 'phase-monitor-item active';
-                pmL3.className = 'phase-monitor-item active';
-                pmiL1.className = 'pm-indicator';
-                pmiL2.className = 'pm-indicator';
-                pmiL3.className = 'pm-indicator';
+                btn.className = "btn btn-toggle"; btn.style.borderColor = "var(--accent-purple)";
+                btn.innerText = "🔇 Voice Assistant: OFF"; window.speechSynthesis.cancel();
             }
         }
 
-        function simulateAIDetection(type) {
-            const detectedType = document.getElementById('aiDetectedType');
-            const confidence = document.getElementById('aiConfidence');
-            const decisionText = document.getElementById('aiDecisionText');
-            const pulse = document.getElementById('detectionPulse');
-
-            // Simulate AI "thinking" with confidence building
-            detectedType.textContent = 'Analyzing...';
-            confidence.textContent = 'AI processing waveform signatures...';
-            decisionText.textContent = 'Detecting phase configuration from current and voltage patterns...';
-
-            setTimeout(() => {
-                const conf = (94 + Math.random() * 5).toFixed(1);
-
-                if (type === 'single') {
-                    detectedType.textContent = 'Single Phase System';
-                    confidence.textContent = `AI Confidence: ${conf}%`;
-                    decisionText.textContent = 'Single phase mode detected. Monitoring each breaker independently with separate readings for voltage, current, and power per breaker channel.';
-                    pulse.className = 'detection-pulse single-phase';
-
-                    addTickerItem(`AI Detection: Single phase confirmed with ${conf}% confidence. Individual breaker monitoring activated.`, 'success');
-                    addTickerItem('AI Decision: Each breaker channel detected and monitored separately for load distribution analysis.', 'info');
-                } else {
-                    detectedType.textContent = 'Three Phase System';
-                    confidence.textContent = `AI Confidence: ${conf}%`;
-                    decisionText.textContent = 'Monitoring all 3 phases with independent fault detection, phase balancing, and inter-phase thermal correlation.';
-                    pulse.className = 'detection-pulse three-phase';
-
-                    addTickerItem(`AI Detection: Three phase confirmed with ${conf}% confidence. All channels active.`, 'success');
-                    addTickerItem('AI Decision: Phase rotation and load balancing algorithms activated.', 'info');
-                }
-            }, 800);
-        }
-
-        function updateElectricalForLoadType(type) {
-            if (type === 'single') {
-                // Change labels to "L1 to Neutral", "L2 to Neutral", "L3 to Neutral"
-                document.getElementById('label-vL1').textContent = 'L1 to Neutral';
-                document.getElementById('label-iL1').textContent = 'L1 to Neutral';
-                document.getElementById('label-pL1').textContent = 'L1 to Neutral';
-                
-                document.getElementById('label-vL2').textContent = 'L2 to Neutral';
-                document.getElementById('label-iL2').textContent = 'L2 to Neutral';
-                document.getElementById('label-pL2').textContent = 'L2 to Neutral';
-                
-                document.getElementById('label-vL3').textContent = 'L3 to Neutral';
-                document.getElementById('label-iL3').textContent = 'L3 to Neutral';
-                document.getElementById('label-pL3').textContent = 'L3 to Neutral';
-                
-                // Keep all phases showing readings - single phase shows L1, L2, L3 to Neutral
-                // L1, L2, L3 will continue to update with live values
+        function speakOutLoud(text) {
+            if (voiceEnabled && 'speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); 
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
             }
         }
 
-        function updateChartsForLoadType(type) {
-            // Update trend chart datasets based on load type
-            if (type === 'single') {
-                // Only show L1 data
-                trendChart.data.datasets[0].label = 'Voltage L1 (Single Phase)';
-                trendChart.data.datasets[0].borderColor = '#3b82f6';
-                // Remove second dataset for single phase
-                if (trendChart.data.datasets.length > 1) {
-                    trendChart.data.datasets.pop();
-                }
-            } else {
-                // Restore three phase view
-                trendChart.data.datasets[0].label = 'Voltage L1';
-                trendChart.data.datasets[0].borderColor = '#3b82f6';
-                if (trendChart.data.datasets.length < 2) {
-                    trendChart.data.datasets.push({
-                        label: 'Current L1',
-                        data: Array(30).fill(45).map(v => v + (Math.random() - 0.5) * 4),
-                        borderColor: '#f59e0b',
-                        tension: 0.4,
-                        pointRadius: 0,
-                        yAxisID: 'y1'
-                    });
-                }
-            }
-            trendChart.update();
-        }
-        function startDataSimulation() {
-            let counter = 0;
-            
-            setInterval(() => {
-                counter++;
-                
-                // Update electrical values with realistic noise
-                updateElectricalValues();
-                
-                // Update temperature cards
-                updateTemperatures();
-                
-                // Update charts periodically
-                if (counter % 5 === 0) {
-                    updateCharts();
-                }
-                
-                // Random AI events
-                if (counter % 20 === 0 && Math.random() > 0.7) {
-                    simulateAIEvent();
-                }
-                
-                // Update timestamp
-                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-                
-            }, 2000);
+        function switchOperator() {
+            const user = getActiveWorker();
+            document.getElementById('authStatus').innerText = `Session handed over to: ${user}`;
+            logEvent(`Authentication switched. User logged in.`);
+            speakOutLoud(`Authentication changed. Welcome, ${user}`);
         }
 
-        function updateElectricalValues() {
-            // Respect load type - only update active phases
-            const allPhases = ['L1', 'L2', 'L3'];
-            const allBranches = ['bL1', 'bL2', 'bL3'];
-            
-            allPhases.forEach(phase => {
-                if (state.loadType === 'single' && phase !== 'L1') {
-                    // Keep L2/L3 at 0 for single phase
-                    return;
-                }
-                const v = 230 + (Math.random() - 0.5) * 2;
-                const i = 40 + Math.random() * 10 + (state.health[phase] === 'fault' ? 15 : 0);
-                const p = (v * i / 1000).toFixed(1);
-                
-                document.getElementById(`v${phase}`).textContent = v.toFixed(1);
-                document.getElementById(`i${phase}`).textContent = i.toFixed(1);
-                document.getElementById(`p${phase}`).textContent = p;
-            });
-            
-            allBranches.forEach(branch => {
-                const phaseNum = branch.replace('b', ''); // L1, L2, L3
-                if (state.loadType === 'single' && phaseNum !== 'L1') {
-                    return;
-                }
-                document.getElementById(`v${branch}`).textContent = (228 + Math.random() * 3).toFixed(1);
-                document.getElementById(`i${branch}`).textContent = (15 + Math.random() * 5).toFixed(1);
-                document.getElementById(`p${branch}`).textContent = (3.5 + Math.random()).toFixed(1);
-            });
-            
-            // Update totals - only sum active phases
-            let total = parseFloat(document.getElementById('pL1').textContent);
-            if (state.loadType === 'three') {
-                total += parseFloat(document.getElementById('pL2').textContent) + 
-                         parseFloat(document.getElementById('pL3').textContent);
-            }
-            document.getElementById('totalPower').textContent = total.toFixed(1) + ' kW';
-            
-            // Update THD and PF
-            document.getElementById('thdMain').textContent = (2 + Math.random()).toFixed(1) + '%';
-            document.getElementById('pfMain').textContent = (0.92 + Math.random() * 0.05).toFixed(2);
-        }
-
-        function updateTemperatures() {
-            const temps = {
-                L1: 45 + Math.random() * 5 + (state.health.L1 === 'fault' ? 20 : 0),
-                L2: 43 + Math.random() * 5,
-                L3: 44 + Math.random() * 5,
-                Amb: 24 + Math.random() * 2
-            };
-            
-            Object.keys(temps).forEach(key => {
-                const el = document.getElementById(`val${key}`);
-                const card = document.getElementById(`temp${key}`);
-                const temp = temps[key];
-                
-                el.textContent = temp.toFixed(1) + '°C';
-                
-                // Update card color based on temperature
-                card.classList.remove('warning', 'danger');
-                if (temp > 65) card.classList.add('danger');
-                else if (temp > 55) card.classList.add('warning');
-            });
-            
-            // Update vibration and acoustic
-            document.getElementById('vibration').textContent = (0.3 + Math.random() * 0.3).toFixed(2) + ' m/s²';
-            document.getElementById('acoustic').textContent = (40 + Math.random() * 5).toFixed(1) + ' dB';
-        }
-
-        function updateCharts() {
-            // Update trend chart
-            trendChart.data.datasets[0].data.shift();
-            trendChart.data.datasets[0].data.push(230 + (Math.random() - 0.5) * 2);
-            trendChart.data.datasets[1].data.shift();
-            trendChart.data.datasets[1].data.push(45 + (Math.random() - 0.5) * 4);
-            trendChart.update('none');
-            
-            // Update harmonic chart
-            harmonicChart.data.datasets[0].data = harmonicChart.data.datasets[0].data.map(v => 
-                Math.max(0.1, v + (Math.random() - 0.5) * 0.3)
-            );
-            harmonicChart.update('none');
-            
-            // Update forecast
-            const baseTemp = 45 + Math.random() * 5;
-            forecastChart.data.datasets[0].data = [
-                baseTemp,
-                baseTemp + 2,
-                baseTemp + 5,
-                baseTemp + 8,
-                baseTemp + 12
-            ];
-            forecastChart.update('none');
-        }
-
-        function simulateAIEvent() {
-            const events = [
-                { type: 'info', msg: 'Baseline drift detected in thermal profile. Recalibrating...' },
-                { type: 'warning', msg: 'Phase L1 current spike detected. Monitoring for overload...' },
-                { type: 'success', msg: 'Predictive model updated. RUL confidence: 94%' },
-                { type: 'info', msg: 'Harmonic distortion within IEEE 519 limits.' },
-                { type: 'warning', msg: 'Vibration signature change detected on main contactor.' }
-            ];
-            
-            const event = events[Math.floor(Math.random() * events.length)];
-            addTickerItem(event.msg, event.type);
-            
-            // Occasionally trigger health state changes (only for active phases)
-            if (Math.random() > 0.8) {
-                let availablePhases;
-                if (state.loadType === 'single') {
-                    availablePhases = ['L1'];
-                } else {
-                    availablePhases = ['L1', 'L2', 'L3'];
-                }
-                const phase = availablePhases[Math.floor(Math.random() * availablePhases.length)];
-                const states = ['normal', 'warning', 'fault'];
-                const newState = states[Math.floor(Math.random() * states.length)];
-                
-                updateHealthState(phase, newState);
-            }
-            
-            // Occasionally trigger auto-shifting (three phase only)
-            if (state.loadType === 'three' && Math.random() > 0.9 && state.health.L1 === 'warning') {
-                showNotification('Auto-Shifting Load from L1 to L2...');
-                addTickerItem('AI Decision: Automatic load transfer initiated to balance phases.', 'warning');
-            }
-        }
-
-        function updateHealthState(phase, newState) {
-            state.health[phase] = newState;
-            const card = document.getElementById(`health${phase}`);
-            const status = document.getElementById(`status${phase}`);
-            
-            card.className = `health-card ${newState}`;
-            status.textContent = newState.toUpperCase();
-            
-            if (newState === 'fault' && !state.tripped) {
-                addTickerItem(`CRITICAL: Phase ${phase} fault detected! Analyzing root cause...`, 'danger');
-                document.getElementById('faultValue').textContent = phase === 'L1' ? 'OVERLOAD DETECTED' : 
-                                                                    phase === 'L2' ? 'LOOSE CONNECTION' : 'PHASE IMBALANCE';
-                document.getElementById('anomalyBadge').textContent = 'ANOMALY DETECTED';
-                document.getElementById('anomalyBadge').className = 'anomaly-badge anomaly-detected';
-                
-                // Auto-trip if critical
-                if (Math.random() > 0.5) {
-                    setTimeout(() => triggerMasterTrip(), 2000);
-                }
-            } else if (newState === 'normal') {
-                document.getElementById('faultValue').textContent = 'NO FAULT DETECTED';
-                document.getElementById('anomalyBadge').textContent = 'NORMAL PATTERN';
-                document.getElementById('anomalyBadge').className = 'anomaly-badge anomaly-normal';
-            }
-        }
-
-        function addTickerItem(msg, type) {
-            const ticker = document.getElementById('ticker');
+        function logEvent(msg) {
+            const term = document.getElementById('terminal');
             const time = new Date().toLocaleTimeString();
+            const user = getActiveWorker();
+            const visualMsg = `[${time}] <span style="color:#8b5cf6;">[${user}]</span> ${msg}`;
+            const div = document.createElement('div');
+            div.innerHTML = visualMsg;
+            term.prepend(div);
+            workerActionHistory.push({ time: time, user: user, action: msg });
+        }
+
+        function clearCache() {
+            document.getElementById('terminal').innerHTML = "";
+            workerActionHistory = []; 
+            for(let i=0; i<20; i++) { historyData.A[i]=0; historyData.B[i]=0; historyData.C[i]=0; }
+            logEvent("System cache cleared. History backed up.");
+            speakOutLoud("Cache memory cleared successfully.");
+            updateStateGraphs();
+        }
+
+        function generateReport() {
+            const user = getActiveWorker();
+            const avgV = document.getElementById('m_v').innerText;
+            const avgC = document.getElementById('m_c').innerText;
+            const temp = document.getElementById('m_t').innerText;
+            const tempA = document.getElementById('tA').innerText;
+            const tempB = document.getElementById('tB').innerText;
+            const tempC = document.getElementById('tC').innerText;
+            const hum = document.getElementById('m_h').innerText;
+            const smoke = document.getElementById('m_smoke').innerText;
             
-            const item = document.createElement('div');
-            item.className = 'ticker-item';
-            item.style.borderLeftColor = type === 'danger' ? 'var(--danger)' : 
-                                       type === 'warning' ? 'var(--warning)' : 'var(--accent-cyan)';
-            item.innerHTML = `
-                <div class="ticker-time">${time}</div>
-                <div>${msg}</div>
-            `;
+            let tableHTML = "";
+            workerActionHistory.forEach(row => {
+                tableHTML += `<tr><td style="border:1px solid #ddd; padding:8px;">${row.time}</td>
+                              <td style="border:1px solid #ddd; padding:8px; font-weight:bold;">${row.user}</td>
+                              <td style="border:1px solid #ddd; padding:8px;">${row.action}</td></tr>`;
+            });
+
+            const reportWin = window.open('', '_blank');
+            reportWin.document.write(`
+                <html><head><title>Power Quality Audit Report</title>
+                <style>body{font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #111827;}</style>
+                </head><body>
+                <h1 style="color: #3b82f6;">⚡ Power Quality & Operations Audit</h1>
+                <p><strong>Generated By:</strong> ${user}</p>
+                <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+                <hr>
+                <h3>1. Live Snapshot Telemetry</h3>
+                <ul>
+                    <li>Average Voltage: ${avgV} V</li>
+                    <li>Average Current: ${avgC} A</li>
+                    <li>Ambient Enclosure Temp: ${temp}</li>
+                    <li>Phase L1/L2/L3 Temperatures: ${tempA} / ${tempB} / ${tempC}</li>
+                    <li>Humidity: ${hum}</li>
+                    <li>Smoke AQI: ${smoke}</li>
+                </ul>
+                <h3>2. Operator Action Blackbox History</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px; text-align:left;">
+                    <tr style="background:#f3f4f6;"><th style="border:1px solid #ddd; padding:8px;">Time</th><th style="border:1px solid #ddd; padding:8px;">Operator</th><th style="border:1px solid #ddd; padding:8px;">Action Logged</th></tr>
+                    ${tableHTML}
+                </table>
+                <br><br><button onclick="window.print()" style="padding:10px 20px; background:#10b981; color:white; border:none; cursor:pointer; font-weight:bold; border-radius:5px;">🖨️ Print PDF Data</button>
+                </body></html>
+            `);
+            reportWin.document.close();
+            logEvent(`Generated PQ Audit Report window.`);
+        }
+
+        function triggerInstantDiagnostics() {
+            const iA = parseFloat(document.getElementById('iA').innerText) || 0;
+            const iB = parseFloat(document.getElementById('iB').innerText) || 0;
+            const iC = parseFloat(document.getElementById('iC').innerText) || 0;
             
-            ticker.insertBefore(item, ticker.firstChild);
+            const tA = parseFloat(document.getElementById('tA').innerText) || sysTemp;
+            const tB = parseFloat(document.getElementById('tB').innerText) || sysTemp;
+            const tC = parseFloat(document.getElementById('tC').innerText) || sysTemp;
+
+            const limitT = parseInt(document.getElementById('tLimit').innerText);
+            const limitC = parseInt(document.getElementById('cLimit').innerText);
+            const limitS = parseInt(document.getElementById('sLimit').innerText);
+            const limitH = parseInt(document.getElementById('hLimit').innerText);
+            updateDynamicSuggestions(iA, iB, iC, tA, tB, tC, limitT, limitC, limitS, limitH);
+        }
+
+        function togglePhase(phase) {
+            phaseState[phase] = !phaseState[phase];
+            const btn = document.getElementById(`btn${phase}`);
+            const card = document.getElementById(`card${phase}`);
             
-            // Keep only last 20 items
-            while (ticker.children.length > 20) {
-                ticker.removeChild(ticker.lastChild);
+            if (phaseState[phase]) {
+                btn.className = "btn btn-toggle active";
+                btn.innerText = `Phase ${phase} ON`;
+                card.style.opacity = "1";
+                logEvent(`Phase ${phase} Contactor Engaged manually.`);
+                if(phaseState.Master) speakOutLoud(`Phase ${phase} engaged.`);
+            } else {
+                btn.className = "btn btn-toggle inactive";
+                btn.innerText = `Phase ${phase} OFF`;
+                card.style.opacity = "0.4";
+                logEvent(`WARNING: Phase ${phase} Contactor Opened manually.`);
+                if(phaseState.Master) speakOutLoud(`Warning: Phase ${phase} disconnected.`);
+            }
+            updateStateGraphs();
+            triggerInstantDiagnostics(); 
+        }
+
+        function masterTripToggle() {
+            const btn = document.getElementById('btnMaster');
+            
+            if (phaseState.Master) {
+                phaseState.Master = false;
+                document.getElementById('sysStatus').innerText = "⚠ MASTER TRIP ACTIVE";
+                document.getElementById('sysStatus').style.color = "var(--accent-red)";
+                btn.innerText = "↻ SYSTEM OFF - RESET MASTER";
+                btn.style.background = "var(--accent-yellow)";
+                btn.style.color = "#000";
+                
+                logEvent("<span style='color: #ef4444;'>CRITICAL: Master Contactor MC0 Emergency Trip.</span>");
+                if(!fireAlarmActive) speakOutLoud("Emergency. Master trip activated. Power isolated.");
+            } else {
+                if(fireAlarmActive) resetFireAlarm();
+                phaseState.Master = true;
+                
+                document.getElementById('sysStatus').innerText = "🟢 Python Backend Connected";
+                document.getElementById('sysStatus').style.color = "var(--accent-green)";
+                
+                btn.innerText = "⚠ EMERGENCY TRIP";
+                btn.style.background = "rgba(239, 68, 68, 0.2)";
+                btn.style.color = "var(--accent-red)";
+                
+                logEvent("<span style='color: var(--accent-green);'>SYSTEM RESET: Master Contactor MC0 Re-engaged.</span>");
+                speakOutLoud("System reset. Master contactor online. Restoring branch power.");
+            }
+            updateStateGraphs();
+            triggerInstantDiagnostics(); 
+        }
+
+        function triggerFireAlarm(reason) {
+            if(fireAlarmActive) return; 
+            fireAlarmActive = true;
+            document.body.classList.add('strobe-active');
+            
+            if(phaseState.Master) masterTripToggle(); 
+            
+            logEvent(`<span style='color: white; background: red; font-weight: bold; padding: 2px 5px;'>CRITICAL ALARM: ${reason}</span>`);
+            speakOutLoud(`Critical Warning. ${reason}. Evacuate immediately. System power isolated.`);
+            
+            alarmIntervalTimer = setInterval(() => {
+                if(fireAlarmActive) speakOutLoud(`Critical Warning. ${reason}. Power locked out.`);
+            }, 5000);
+        }
+
+        function resetFireAlarm() {
+            fireAlarmActive = false;
+            document.body.classList.remove('strobe-active');
+            clearInterval(alarmIntervalTimer);
+            logEvent("<span style='color: var(--accent-green);'>Fire alarm cleared by operator.</span>");
+        }
+
+        function updateDynamicSuggestions(currentA, currentB, currentC, tempA, tempB, tempC, limitT, limitC, limitS, limitH) {
+            let newHTML = ""; 
+            let isHealthy = true;
+            const maxTemp = Math.max(sysTemp, tempA, tempB, tempC);
+
+            if (maxTemp >= limitT || smokeAQI >= limitS) {
+                let reason = maxTemp >= limitT ? "THERMAL LIMIT EXCEEDED" : "SMOKE DETECTED IN ENCLOSURE";
+                triggerFireAlarm(reason);
+                newHTML += `<li><span style='color:white; background:red; padding: 5px; font-weight:bold; border-radius:4px;'>🔥 URGENT FIRE/SMOKE HAZARD:</span> <strong>${reason}</strong>. System locked down. Click Master Reset to override.</li>`;
+                isHealthy = false;
+            }
+
+            if (!phaseState.Master && !fireAlarmActive) {
+                newHTML += "<li><span style='color:var(--accent-red); font-weight:bold;'>URGENT:</span> <strong>Master Contactor (MC0)</strong> is Isolated. Physical inspection required before resetting power.</li>";
+                isHealthy = false;
+            } else if (phaseState.Master && !fireAlarmActive) {
+                
+                if (sysHum >= limitH) {
+                    newHTML += "<li><span style='color:var(--accent-blue); font-weight:bold;'>ENVIRONMENTAL WARNING:</span> High Humidity Detected. Condensation risk on terminal blocks. Inspect for water ingress.</li>";
+                    isHealthy = false;
+                }
+
+                const phaseData = [
+                    { state: phaseState.A, name: "MC1 / L1 Breaker", loc: "Phase A" },
+                    { state: phaseState.B, name: "MC2 / L2 Breaker", loc: "Phase B" },
+                    { state: phaseState.C, name: "MC3 / L3 Breaker", loc: "Phase C" }
+                ];
+                
+                phaseData.forEach(p => {
+                    if (!p.state) {
+                        newHTML += `<li><span style='color:var(--accent-red); font-weight:bold;'>URGENT:</span> <strong>${p.name}</strong> at <strong>${p.loc}</strong> is offline. Inspect terminal block for faults.</li>`;
+                        isHealthy = false;
+                    }
+                });
+
+                if (tempA >= limitT - 3 && tempA < limitT) {
+                    newHTML += `<li><span style='color:var(--accent-yellow); font-weight:bold;'>SCHEDULED MAINTENANCE:</span> Elevated temperature (${tempA.toFixed(1)}°C) on <strong>Phase A Breaker</strong>. Inspect contacts.</li>`;
+                    isHealthy = false;
+                }
+                if (tempB >= limitT - 3 && tempB < limitT) {
+                    newHTML += `<li><span style='color:var(--accent-yellow); font-weight:bold;'>SCHEDULED MAINTENANCE:</span> Elevated temperature (${tempB.toFixed(1)}°C) on <strong>Phase B Breaker</strong>. Inspect contacts.</li>`;
+                    isHealthy = false;
+                }
+                if (tempC >= limitT - 3 && tempC < limitT) {
+                    newHTML += `<li><span style='color:var(--accent-yellow); font-weight:bold;'>SCHEDULED MAINTENANCE:</span> Elevated temperature (${tempC.toFixed(1)}°C) on <strong>Phase C Breaker</strong>. Inspect contacts.</li>`;
+                    isHealthy = false;
+                }
+                
+                if (sysTemp >= limitT - 3 && sysTemp < limitT) {
+                    newHTML += "<li><span style='color:var(--accent-yellow); font-weight:bold;'>SCHEDULED MAINTENANCE:</span> Elevated temperatures detected at <strong>Main Enclosure</strong>. Recommend vent cleaning.</li>";
+                    isHealthy = false;
+                }
+
+                const wearThreshold = limitC * 0.85; 
+                if (phaseState.A && currentA > wearThreshold) {
+                    newHTML += `<li><span style='color:var(--accent-yellow); font-weight:bold;'>SCHEDULED MAINTENANCE:</span> High load degradation on <strong>MC1 Contactor</strong>. Schedule inspection within 7 Days.</li>`;
+                    isHealthy = false;
+                }
+                if (phaseState.B && currentB > wearThreshold) {
+                    newHTML += `<li><span style='color:var(--accent-yellow); font-weight:bold;'>SCHEDULED MAINTENANCE:</span> High load degradation on <strong>MC2 Contactor</strong>. Schedule inspection within 7 Days.</li>`;
+                    isHealthy = false;
+                }
+                if (phaseState.C && currentC > wearThreshold) {
+                    newHTML += `<li><span style='color:var(--accent-yellow); font-weight:bold;'>SCHEDULED MAINTENANCE:</span> High load degradation on <strong>MC3 Contactor</strong>. Schedule inspection within 7 Days.</li>`;
+                    isHealthy = false;
+                }
+            }
+
+            if (isHealthy && phaseState.Master && !fireAlarmActive) {
+                newHTML = "<li><span style='color:var(--accent-green); font-weight:bold;'>System is Healthy.</span> All electrical, thermal, and atmospheric parameters are nominal. No maintenance required.</li>";
+            }
+
+            if (newHTML !== lastSuggestionHTML) {
+                document.getElementById('suggestionsBox').innerHTML = newHTML;
+                lastSuggestionHTML = newHTML;
             }
         }
 
-        function toggleControl(device) {
-            if (state.tripped && device !== 'reset') return;
-            
-            state.controls[device] = !state.controls[device];
-            const btn = document.getElementById(`btn${device.charAt(0).toUpperCase() + device.slice(1)}`);
-            const status = document.getElementById(`status${device.charAt(0).toUpperCase() + device.slice(1)}${device === 'main' ? '' : 'Btn'}`);
-            
-            btn.classList.toggle('active', state.controls[device]);
-            
-            const isOn = state.controls[device];
-            status.textContent = isOn ? (device === 'main' ? '● ENERGIZED' : '● CLOSED') : 
-                                        (device === 'main' ? '○ DE-ENERGIZED' : '○ OPEN');
-            status.style.color = isOn ? 'var(--success)' : 'var(--danger)';
-            
-            addTickerItem(`Operator action: ${device.toUpperCase()} contactor ${isOn ? 'CLOSED' : 'OPENED'}`, 'info');
-        }
+        // --- 12. CHARTS & SIMULATION INITIALIZATION ---
+        Chart.defaults.color = '#8b949e';
+        Chart.defaults.borderColor = '#31364f';
 
-        function triggerMasterTrip() {
-            state.tripped = true;
-            state.controls.main = false;
-            state.controls.l1 = false;
-            state.controls.l2 = false;
-            state.controls.l3 = false;
-            
-            // Update UI
-            document.getElementById('masterTrip').classList.add('active');
-            document.getElementById('resetBtn').classList.add('show');
-            
-            // Update all buttons
-            ['main', 'l1', 'l2', 'l3'].forEach(dev => {
-                const btn = document.getElementById(`btn${dev.charAt(0).toUpperCase() + dev.slice(1)}`);
-                const status = document.getElementById(`status${dev.charAt(0).toUpperCase() + dev.slice(1)}${dev === 'main' ? '' : 'Btn'}`);
-                btn.classList.remove('active');
-                status.textContent = dev === 'main' ? '○ TRIPPED' : '○ OPEN';
-                status.style.color = 'var(--danger)';
+        function createStateChart(ctxId, color) {
+            return new Chart(document.getElementById(ctxId).getContext('2d'), {
+                type: 'line',
+                data: { labels: Array.from({length: 20}, (_, i) => i), datasets: [{ data: [], borderColor: color, backgroundColor: color + '40', borderWidth: 2, pointRadius: 0, stepped: true, fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { min: -0.1, max: 1.1, display: false } } }
             });
-            
-            addTickerItem('MASTER TRIP ACTIVATED: AI Safety Shutdown triggered due to critical fault!', 'danger');
         }
+        const chartStateA = createStateChart('stateA', '#ef4444');
+        const chartStateB = createStateChart('stateB', '#f59e0b');
+        const chartStateC = createStateChart('stateC', '#3b82f6');
 
-        function resetSystem() {
-            state.tripped = false;
-            document.getElementById('masterTrip').classList.remove('active');
-            document.getElementById('resetBtn').classList.remove('show');
-            
-            // Reset all to on
-            ['main', 'l1', 'l2', 'l3'].forEach(dev => {
-                state.controls[dev] = true;
-                const btn = document.getElementById(`btn${dev.charAt(0).toUpperCase() + dev.slice(1)}`);
-                const status = document.getElementById(`status${dev.charAt(0).toUpperCase() + dev.slice(1)}${dev === 'main' ? '' : 'Btn'}`);
-                btn.classList.add('active');
-                status.textContent = dev === 'main' ? '● ENERGIZED' : '● CLOSED';
-                status.style.color = 'var(--success)';
+        // COMBINED WAVEFORM
+        const waveCtx = document.getElementById('waveformChart').getContext('2d');
+        const waveformChart = new Chart(waveCtx, {
+            type: 'line',
+            data: { labels: Array.from({length: 50}, (_, i) => i), datasets: [
+                { borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.15)', borderWidth: 2, pointRadius: 0, tension: 0.2, fill: true },
+                { borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.15)', borderWidth: 2, pointRadius: 0, tension: 0.2, fill: true },
+                { borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.15)', borderWidth: 2, pointRadius: 0, tension: 0.2, fill: true }
+            ]},
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { min: -350, max: 350, grid: { color: 'rgba(139, 148, 158, 0.15)' } } } }
+        });
+
+        // INDIVIDUAL PHASE WAVEFORMS
+        function createSingleWaveChart(ctxId, color, bgColor) {
+            return new Chart(document.getElementById(ctxId).getContext('2d'), {
+                type: 'line',
+                data: { labels: Array.from({length: 50}, (_, i) => i), datasets: [{ data: [], borderColor: color, backgroundColor: bgColor, borderWidth: 2, pointRadius: 0, tension: 0.2, fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { min: -350, max: 350, grid: { color: 'rgba(139, 148, 158, 0.15)' } } } }
             });
-            
-            // Reset health states
-            ['L1', 'L2', 'L3'].forEach(phase => updateHealthState(phase, 'normal'));
-            
-            addTickerItem('System RESET executed. Manual inspection required before restart.', 'warning');
+        }
+        const waveA = createSingleWaveChart('waveA', '#ef4444', 'rgba(239, 68, 68, 0.15)');
+        const waveB = createSingleWaveChart('waveB', '#f59e0b', 'rgba(245, 158, 11, 0.15)');
+        const waveC = createSingleWaveChart('waveC', '#3b82f6', 'rgba(59, 130, 246, 0.15)');
+
+        const ctxFFT = document.getElementById('fftChart').getContext('2d');
+        new Chart(ctxFFT, {
+            type: 'bar',
+            data: { labels: Array.from({length: 20}, (_, i) => i), datasets: [{ data: [5, 100, 10, 5, 2, 1, 0, 5, 20, 2, 0, 0, 0, 0], backgroundColor: '#8b5cf6' }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+        });
+
+        function createVIChart(ctxId, color) {
+            return new Chart(document.getElementById(ctxId).getContext('2d'), {
+                type: 'scatter',
+                data: { datasets: [{ data: [], borderColor: color, backgroundColor: color, borderWidth: 2, pointRadius: 0, showLine: true }] },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
+                    scales: { 
+                        x: { display: true, min: -10, max: 10, title: { display: true, text: 'Current (A)', color: '#8b949e', font: {size: 10}}, grid: { color: (ctx) => ctx.tick.value === 0 ? '#64748b' : 'rgba(139, 148, 158, 0.1)', lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1 } }, 
+                        y: { display: true, min: -350, max: 350, title: { display: true, text: 'Voltage (V)', color: '#8b949e', font: {size: 10}}, grid: { color: (ctx) => ctx.tick.value === 0 ? '#64748b' : 'rgba(139, 148, 158, 0.1)', lineWidth: (ctx) => ctx.tick.value === 0 ? 2 : 1 } } 
+                    } 
+                }
+            });
+        }
+        const viChartA = createVIChart('viChartA', '#ef4444');
+        const viChartB = createVIChart('viChartB', '#f59e0b');
+        const viChartC = createVIChart('viChartC', '#3b82f6');
+
+        function generateScatterPoints(ampV, ampI, powerFactor, timeOffset) {
+            if (ampV === 0 || ampI === 0) return [{x:0, y:0}];
+            let pts = [];
+            let phaseShift = Math.acos(powerFactor); 
+            for(let step = 0; step <= 40; step++){
+                let t = step * 0.2 + timeOffset;
+                pts.push({ x: Math.sin(t - phaseShift) * ampI * 1.414, y: Math.sin(t) * ampV * 1.414 });
+            }
+            return pts;
         }
 
-        function showNotification(text) {
-            const notif = document.getElementById('notification');
-            notif.textContent = '⚡ ' + text;
-            notif.classList.add('show');
-            setTimeout(() => notif.classList.remove('show'), 3000);
+        // --- 13. SIMULATION LOOP (Runs every 200ms) ---
+        let timeStep = 0;
+        
+        function updateStateGraphs() {
+            historyData.A.shift(); historyData.A.push(phaseState.A ? 1 : 0);
+            historyData.B.shift(); historyData.B.push(phaseState.B ? 1 : 0);
+            historyData.C.shift(); historyData.C.push(phaseState.C ? 1 : 0);
+            
+            chartStateA.data.datasets[0].data = historyData.A; chartStateA.update('none');
+            chartStateB.data.datasets[0].data = historyData.B; chartStateB.update('none');
+            chartStateC.data.datasets[0].data = historyData.C; chartStateC.update('none');
         }
+
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
+            timeStep += 0.2;
+            
+            sysTemp = 28.0 + Math.sin(timeStep * 0.1) * 1.5;
+            sysHum = 45.0 + Math.cos(timeStep * 0.05) * 5; 
+            smokeAQI = 200 + Math.sin(timeStep * 0.05) * 10;
+            
+            document.getElementById('m_t').innerText = sysTemp.toFixed(1) + " °C";
+            document.getElementById('m_h').innerText = sysHum.toFixed(1) + " %";
+            document.getElementById('m_smoke').innerText = smokeAQI.toFixed(0) + " AQI";
+
+            // LIVE GRID FREQUENCY SIMULATION (Simulating 50Hz Grid Intertia)
+            let gridFreq = 50.0 + (Math.sin(timeStep * 0.05) * 0.03) + (Math.random() * 0.02 - 0.01);
+            document.getElementById('m_hz').innerHTML = gridFreq.toFixed(2) + '<span style="font-size:10px">Hz</span>';
+
+            const masterActive = phaseState.Master;
+            const ampV_A = (masterActive && phaseState.A) ? 220 : 0;
+            const ampV_B = (masterActive && phaseState.B) ? 220 : 0;
+            const ampV_C = (masterActive && phaseState.C) ? 220 : 0;
+
+            const waveDataA = Array.from({length: 50}, (_, i) => Math.sin(i*0.2 + timeStep) * ampV_A * 1.414);
+            const waveDataB = Array.from({length: 50}, (_, i) => Math.sin(i*0.2 + timeStep + 2.094) * ampV_B * 1.414);
+            const waveDataC = Array.from({length: 50}, (_, i) => Math.sin(i*0.2 + timeStep + 4.188) * ampV_C * 1.414);
+
+            waveformChart.data.datasets[0].data = waveDataA;
+            waveformChart.data.datasets[1].data = waveDataB;
+            waveformChart.data.datasets[2].data = waveDataC;
+            waveformChart.update('none');
+
+            waveA.data.datasets[0].data = waveDataA; waveB.data.datasets[0].data = waveDataB; waveC.data.datasets[0].data = waveDataC;
+            waveA.update('none'); waveB.update('none'); waveC.update('none');
+
+            document.getElementById('vA').innerText = (ampV_A + (ampV_A > 0 ? Math.random() : 0)).toFixed(1) + " V";
+            document.getElementById('vB').innerText = (ampV_B + (ampV_B > 0 ? Math.random() : 0)).toFixed(1) + " V";
+            document.getElementById('vC').innerText = (ampV_C + (ampV_C > 0 ? Math.random() : 0)).toFixed(1) + " V";
+            
+            const currentValA = (masterActive && phaseState.A) ? 4.5 + Math.random()*0.4 : 0.0;
+            const currentValB = (masterActive && phaseState.B) ? 4.4 + Math.random()*0.4 : 0.0;
+            const currentValC = (masterActive && phaseState.C) ? 4.6 + Math.random()*0.4 : 0.0;
+
+            document.getElementById('iA').innerText = currentValA.toFixed(1) + " A";
+            document.getElementById('iB').innerText = currentValB.toFixed(1) + " A";
+            document.getElementById('iC').innerText = currentValC.toFixed(1) + " A";
+
+            const tempA = (masterActive && phaseState.A) ? sysTemp + 1.2 + Math.random() : sysTemp;
+            const tempB = (masterActive && phaseState.B) ? sysTemp + 1.0 + Math.random() : sysTemp;
+            const tempC = (masterActive && phaseState.C) ? sysTemp + 1.5 + Math.random() : sysTemp;
+
+            document.getElementById('tA').innerText = tempA.toFixed(1) + " °C";
+            document.getElementById('tB').innerText = tempB.toFixed(1) + " °C";
+            document.getElementById('tC').innerText = tempC.toFixed(1) + " °C";
+
+            const pfA = parseFloat(document.getElementById('pfA').innerText);
+            const pfB = parseFloat(document.getElementById('pfB').innerText);
+            const pfC = parseFloat(document.getElementById('pfC').innerText);
+
+            viChartA.data.datasets[0].data = generateScatterPoints(ampV_A, currentValA, pfA, timeStep);
+            viChartB.data.datasets[0].data = generateScatterPoints(ampV_B, currentValB, pfB, timeStep + 2);
+            viChartC.data.datasets[0].data = generateScatterPoints(ampV_C, currentValC, pfC, timeStep + 4);
+            viChartA.update('none'); viChartB.update('none'); viChartC.update('none');
+
+            const activePhases = [(masterActive && phaseState.A), (masterActive && phaseState.B), (masterActive && phaseState.C)].filter(Boolean).length;
+            const avgVolts = activePhases > 0 ? ((ampV_A+ampV_B+ampV_C)/activePhases).toFixed(1) : "0.0";
+            const totAmps = (currentValA + currentValB + currentValC).toFixed(1);
+            
+            document.getElementById('m_v').innerText = avgVolts;
+            document.getElementById('m_c').innerText = totAmps;
+            
+            if(Math.floor(timeStep * 10) % 5 === 0) updateStateGraphs();
+            
+            const limitT = parseInt(document.getElementById('tLimit').innerText);
+            const limitC = parseInt(document.getElementById('cLimit').innerText);
+            const limitS = parseInt(document.getElementById('sLimit').innerText);
+            const limitH = parseInt(document.getElementById('hLimit').innerText);
+            updateDynamicSuggestions(currentValA, currentValB, currentValC, tempA, tempB, tempC, limitT, limitC, limitS, limitH);
+
+        }, 200);
+
+        logEvent("System Boot Sequence Complete.");
+        logEvent("Industrial SCADA Graphical Core Online.");
     </script>
 </body>
 </html>

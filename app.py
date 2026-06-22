@@ -2,7 +2,7 @@ import streamlit as st
 import time
 import random
 from database_manager import log_telemetry, save_blackbox_emergency
-from ai_engine import PredictiveMaintenanceAI
+from server import PredictiveMaintenanceAI
 from voice_assistant import PanelVoiceAssistant
 
 # Initialize Core AI Brain and Voice Synthesizer
@@ -115,4 +115,4 @@ if run_panel:
 
         time.sleep(1.5) # Sample interval pause rate
 else:
-    st.info("💡 Dashboard Standing By. Check the 'Activate Real-Time Panel Scan' box on the sidebar menu to turn on telemetry loops.")streamlit run app.py
+    st.info("💡 Dashboard Standing By. Check the 'Activate Real-Time Panel Scan' box on the sidebar menu to turn on telemetry loops.")
